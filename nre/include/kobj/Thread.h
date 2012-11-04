@@ -105,6 +105,13 @@ public:
     }
 
     /**
+     * Fetch the current event bit mask and atomically set it to zero.
+     *
+     * @return event bit mask
+     */
+    word_t fetch_events() { return utcb()->fetch_events(); }
+
+    /**
      * Creates a new TLS slot for all Threads
      *
      * @return the TLS index

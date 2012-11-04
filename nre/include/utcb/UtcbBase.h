@@ -18,6 +18,7 @@
 
 #include <arch/ExecEnv.h>
 #include <utcb/UtcbHead.h>
+#include <util/Atomic.h>
 
 namespace nre {
 
@@ -59,6 +60,13 @@ public:
         crd = 0;
         crd_translate = 0;
     }
+
+    /**
+     * Fetch the current event bit mask and atomically set it to zero.
+     *
+     * @return event bit mask
+     */
+    word_t fetch_events() { return Atomic::xchg(events, (word_t)0); }
 };
 
 }
