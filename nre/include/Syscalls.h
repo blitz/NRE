@@ -272,8 +272,8 @@ public:
      * @param op the requested operation
      * @throws SyscallException if the system-call failed (result != E_SUCCESS)
      */
-    static void vi_ctrl(capsel_t vi, ViOp op) {
-        SyscallABI::syscall(vi << 8 | VI_CTRL | op);
+    static void vi_ctrl(capsel_t vi, ViOp op, word_t mask = ~0UL) {
+        SyscallABI::syscall(vi << 8 | VI_CTRL | op, mask);
     }
 
 
