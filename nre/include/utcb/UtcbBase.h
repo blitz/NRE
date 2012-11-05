@@ -62,11 +62,13 @@ public:
     }
 
     /**
-     * Fetch the current event bit mask and atomically set it to zero.
+     * Fetch the current event bit mask and atomically set it to
+     * zero. Respects the given mask, i.e. only those bits set in the
+     * mask are cleared and returned.
      *
-     * @return event bit mask
+     * @return event bitmask
      */
-    word_t fetch_events() { return Atomic::xchg(events, (word_t)0); }
+    word_t fetch_events(word_t mask = ~0UL) { return mask & __sync_fetch_and_and(&events, ~mask); }
 };
 
 }

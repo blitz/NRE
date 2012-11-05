@@ -16,6 +16,7 @@
 
 #include <kobj/GlobalThread.h>
 #include <kobj/Vi.h>
+#include <kobj/Mutex.h>
 #include <ipc/Connection.h>
 #include <services/Console.h>
 #include <CPU.h>
@@ -25,9 +26,22 @@
 
 using namespace nre;
 
+class MutexGuard {
+public:
+    explicit MutexGuard(Mutex &m) : _m(m) { _m.acquire(); }
+    ~MutexGuard() { _m.release(); }
+
+private:
+    MutexGuard(const MutexGuard&);
+    MutexGuard& operator=(const MutexGuard&);
+
+    Mutex &_m;
+};
+
 
 static Connection conscon("console");
 static ConsoleSession cons(conscon, 0, String("vitest"));
+static Mutex mutex;
 
 PORTAL static void recall_handler(capsel_t)
 {
@@ -42,6 +56,7 @@ static void wait_and_print(void *)
     while (true) {
         Vi::block();
 
+        MutexGuard g(mutex);
         serial.writef("CPU%u: Events: %lx.\n", CPU::current().log_id(),
                       Thread::current()->fetch_events());
     }
@@ -59,7 +74,7 @@ int main()
         serial.writef("Starting thread on CPU%u.\n", it->log_id());
 
         LocalThread  *lt = LocalThread ::create(it->log_id());
-        Pt           *pt = new Pt(lt, Hip::get().service_caps() * it->log_id() + CapSelSpace::Caps::EV_RECALL,
+        UNUSED Pt    *pt = new Pt(lt, Hip::get().service_caps() * it->log_id() + CapSelSpace::Caps::EV_RECALL,
                                   recall_handler);
         GlobalThread *gt = GlobalThread::create(wait_and_print, it->log_id(), "vitest-thread");
         serial.writef("Creating Virtual IRQ for CPU%u (cap %u).\n", it->log_id(), c.get());
@@ -77,9 +92,12 @@ int main()
                 cpu_t c = k.character - '0';
                 if (c >= CPU::count()) break;
 
-                serial.writef("Triggering CPU%u.\n", c);
-                irqs[c]->trigger();
-                break;
+                {
+                    MutexGuard g(mutex);
+                    serial.writef("Triggering CPU%u.\n", c);
+                    irqs[c]->trigger();
+                    break;
+                }
             }
         }
     }
