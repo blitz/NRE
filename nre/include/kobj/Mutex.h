@@ -37,17 +37,24 @@ namespace nre {
             assert(current->fetch_events(1) == 0);
 
             current->ensure_mutex_irq();
-            
-            do
-                current->_waiting_for = _wait_list;
-            while (not Atomic::cmpnswap(&_wait_list,
-                                        current->_waiting_for, current));
+
+            Thread *newv;
+            do {
+                current->_waiting_for = newv = _wait_list;
+            } while (not Atomic::cmpnswap(&_wait_list, newv, current));
 
             // We are in the wait list. If we are the tail of the
             // list, we are in the critical section. Otherwise, we
             // must wait.
 
-            if (current->_waiting_for) current->mutex_wait();
+            // We cannot test current->_waiting_for here, because that
+            // can be NULL already, if someone woke us up between the
+            // cmpnswap and here.
+
+            if (newv) current->mutex_wait();
+
+            assert (current->_waiting_for == NULL);
+            assert (current->fetch_events(1) == 0);
 
             _lock_holder = current;
             Sync::memory_barrier();
