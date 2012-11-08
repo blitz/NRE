@@ -51,7 +51,15 @@ namespace nre {
             // can be NULL already, if someone woke us up between the
             // cmpnswap and here.
 
-            if (newv) current->mutex_wait();
+            if (newv) {
+#ifndef NDEBUG
+                for (Thread *cur = current->_waiting_for; cur;
+                     cur = cur->_waiting_for) {
+                    assert(cur != current /* deadlock */);
+                }
+#endif
+                current->mutex_wait();
+            }
 
             assert (current->_waiting_for == NULL);
             assert (current->fetch_events(1) == 0);
