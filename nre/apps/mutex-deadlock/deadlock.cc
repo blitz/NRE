@@ -20,43 +20,25 @@
 #include <ipc/Connection.h>
 #include <services/Timer.h>
 #include <util/Clock.h>
-#include <services/Console.h>
 #include <CPU.h>
 
 using namespace nre;
 
 static Connection timercon("timer");
-static Connection conscon("console");
-static ConsoleSession cons(conscon, 0, String("vitest"));
+static Mutex mutex[2];
 
-static Mutex     mutex;
-static volatile unsigned long critical_int;
-static volatile unsigned long acquire_count;
-
-
-static unsigned long per_cpu[Hip::MAX_CPUS];
-
-static void mutex_torture(void *)
+static void mutex_deadlock(void *)
 {
-    unsigned long acq;
     cpu_t         id = CPU::current().log_id();
+    Mutex        &m1 = mutex[0];
+    Mutex        &m2 = mutex[1];
 
     while (true) {
-        mutex.acquire();
-        acq = ++ acquire_count;
-        per_cpu[id] ++;
+        m1.acquire();
+        m2.acquire();
 
-        assert(critical_int == 0);
-
-        critical_int = id;
-
-        assert(critical_int == id);
-
-        critical_int = 0;
-        assert(critical_int == 0);
-
-        assert(acq == acquire_count);
-        mutex.release();
+        m2.release();
+        m1.release();
     }
 }
 
@@ -64,32 +46,21 @@ int main()
 {
     auto &serial = Serial::get();
 
-    serial.writef("Mutex stress test up.\n");
+    serial.writef("Mutex deadlock test up.\n");
     for (CPU::iterator it = CPU::begin(); it != CPU::end(); ++it) {
         serial.writef("Starting thread on CPU%u.\n", it->log_id());
 
-        GlobalThread *gt = GlobalThread::create(mutex_torture, it->log_id(), "mutex-torture");
+        GlobalThread *gt = GlobalThread::create(mutex_deadlock, it->log_id(), "mutex-deadlock");
         gt->start();
     }
 
     TimerSession timer(timercon);
     Clock clock(1000);
 
-    unsigned long last_acq = 0;
     while (true) {
         timevalue_t   next = clock.source_time(1000);
-        unsigned long cur_acq = acquire_count;
 
-        serial.writef("acq %016lx per-sec %08lx critical_int %lx\n",
-                      cur_acq, cur_acq - last_acq,  critical_int);
-
-        unsigned i = 0;
-        for (CPU::iterator it = CPU::begin(); it != CPU::end(); ++it, i++) {
-            serial.writef("%16lx ", per_cpu[i]);
-        }
-        serial.writef("\n");
-
-        last_acq = cur_acq;
+        serial.writef("Still alive...\n");
 
         // wait a second
         timer.wait_until(next);
