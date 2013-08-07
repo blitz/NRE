@@ -98,3 +98,24 @@ diff -rcN src/binutils-2.23.2/ld/Makefile.in src/binutils/ld/Makefile.in
   eaix5ppc.c: $(srcdir)/emulparams/aix5ppc.sh \
     $(srcdir)/emultempl/aix.em $(srcdir)/scripttempl/aix.sc ${GEN_DEPENDS}
   	${GENSCRIPTS} aix5ppc "$(tdir_aixppc)"
+diff -ru src/binutils.orig/bfd/doc/bfd.texinfo src/binutils/bfd/doc/bfd.texinfo
+--- src/binutils-2.23.2/bfd/doc/bfd.texinfo	2010-10-28 13:40:25.000000000 +0200
++++ src/binutils/bfd/doc/bfd.texinfo	2013-08-07 11:38:43.693342288 +0200
+@@ -322,7 +322,7 @@
+ @printindex cp
+ 
+ @tex
+-% I think something like @colophon should be in texinfo.  In the
++% I think something like @@colophon should be in texinfo.  In the
+ % meantime:
+ \long\def\colophon{\hbox to0pt{}\vfill
+ \centerline{The body of this manual is set in}
+@@ -333,7 +333,7 @@
+ \centerline{{\sl\fontname\tensl\/}}
+ \centerline{are used for emphasis.}\vfill}
+ \page\colophon
+-% Blame: doc@cygnus.com, 28mar91.
++% Blame: doc@@cygnus.com, 28mar91.
+ @end tex
+ 
+ @bye
